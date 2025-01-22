@@ -10,6 +10,8 @@ conda create --name data-sync python=3.9
 conda activate data-sync
 
 pip freeze > requirements.txt
+
+pip install -r requirements.txt
 ```
 
 执行测试SQL：

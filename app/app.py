@@ -248,5 +248,161 @@ def get_unused_links():
         if 'us_connection' in locals():
             us_connection.close()
 
+# 获取大类目订单统计数据
+@app.route('/get_order_statistic_root_category', methods=['GET'])
+def get_order_statistic_root_category():
+
+    # 连接数据库
+    try:
+        lr_connection = get_connection_LR()
+        lr_cursor = lr_connection.cursor(dictionary=True)
+
+        # 查询未使用的链接
+        query = """
+            SELECT d.category_id, 
+                   d.category_name, 
+                   d.description,
+                   ROUND(SUM(b.payment_total_amount), 2) AS userpay, 
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)), 2) AS profit, 
+                   ROUND(SUM(e.money), 2) AS chengben, 
+                   COUNT(0) AS orderCount,
+                   ROUND(SUM(b.payment_total_amount) / COUNT(0), 2) AS avgUserPrice,
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)) / COUNT(0), 2) AS avgProfit,
+                   ROUND(SUM(e.money) / COUNT(0), 2) AS avgChengben,
+                   ROUND(SUM(b.payment_shipping_fee_tax) / COUNT(0), 2) AS avgfeeTax,
+                   ROUND(SUM(b.payment_product_tax) / COUNT(0), 2) AS avgproductTax
+            FROM tiktok_orders_items AS a
+            INNER JOIN tiktok_orders AS b ON a.order_id = b.order_id
+            INNER JOIN tiktok_shop_details AS c ON b.seller_code = c.seller_code
+            INNER JOIN titok_product_category AS d ON c.category_id = d.category_id
+            INNER JOIN t_amazon_order AS e ON e.tiktok_order_id = b.id
+            WHERE b.`status` = 'COMPLETED'  AND e.money IS NOT NULL
+            GROUP BY d.category_id, d.category_name, d.description
+            ORDER BY profit DESC
+        """
+
+        lr_cursor.execute(query)
+        results = lr_cursor.fetchall()
+
+        if not results:
+            return f"No result for order statistic in root category", 404
+
+        # 返回结果
+        return jsonify({"results": results}), 200
+    except mysql.connector.Error as e:
+        return f"Database error: {str(e)}", 500
+    finally:
+        # 关闭数据库连接
+        if 'lr_cursor' in locals():
+            lr_cursor.close()
+        if 'lr_connection' in locals():
+            lr_connection.close()
+
+
+# 获取某个大类目订单统计数据
+@app.route('/get_order_statistic_one_root_category', methods=['GET'])
+def get_order_statistic_one_root_category():
+    # 获取category_id参数
+    category_id = request.args.get('category_id', type=int)
+
+    if category_id is None:
+        return "category_id is required", 400
+
+    # 连接数据库
+    try:
+        lr_connection = get_connection_LR()
+        lr_cursor = lr_connection.cursor(dictionary=True)
+
+        # 查询未使用的链接
+        query = """
+            select g.category_id, g.category_name,g.description,
+                   ROUND(SUM(b.payment_total_amount), 2) AS userpay, 
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)), 2) AS profit, 
+                   ROUND(SUM(e.money), 2) AS chengben, 
+                   COUNT(0) AS orderCount,
+                   ROUND(SUM(b.payment_total_amount) / COUNT(0), 2) AS avgUserPrice,
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)) / COUNT(0), 2) AS avgProfit,
+                   ROUND(SUM(e.money) / COUNT(0), 2) AS avgChengben,
+                   ROUND(SUM(b.payment_shipping_fee_tax) / COUNT(0), 2) AS avgfeeTax,
+                   ROUND(SUM(b.payment_product_tax) / COUNT(0), 2) AS avgproductTax
+            from tiktok_orders_items as a
+            inner join tiktok_orders as b on a.order_id = b.order_id
+            inner join tiktok_shop_details as c on b.seller_code = c.seller_code
+            inner join titok_product_category as d on c.category_id = d.category_id
+            inner join t_amazon_order as e on e.tiktok_order_id = b.id
+            inner join amazon_filter_product as f on a.filter_product_id = f.id
+            inner join titok_product_category as g on f.category_id =g.category_id
+            where d.category_id = %s and  b.`status` = 'COMPLETED' and e.money is not null 
+            group by g.category_id, g.category_name,g.description
+            order by profit desc
+        """
+
+        lr_cursor.execute(query, (category_id,))
+        results = lr_cursor.fetchall()
+
+        if not results:
+            return f"No result for order statistic in one root category", 404
+
+        # 返回结果
+        return jsonify({"results": results}), 200
+    except mysql.connector.Error as e:
+        return f"Database error: {str(e)}", 500
+    finally:
+        # 关闭数据库连接
+        if 'lr_cursor' in locals():
+            lr_cursor.close()
+        if 'lr_connection' in locals():
+            lr_connection.close()
+
+# 获取某个大类目订单明细
+@app.route('/get_order_detail_one_root_category', methods=['GET'])
+def get_order_detail_one_root_category():
+    # 获取category_id参数
+    category_id = request.args.get('category_id', type=int)
+
+    if category_id is None:
+        return "category_id is required", 400
+
+    # 连接数据库
+    try:
+        lr_connection = get_connection_LR()
+        lr_cursor = lr_connection.cursor(dictionary=True)
+
+        # 查询未使用的链接
+        query = """
+            select b.order_id, g.category_id, g.category_name,g.description,
+                ROUND(b.payment_total_amount, 2) AS userpay, 
+                ROUND(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money), 2) AS profit,
+                ROUND(e.money, 2) AS chengben,
+                ROUND(b.payment_shipping_fee_tax, 2) AS feeTax,
+                ROUND(b.payment_product_tax, 2) AS productTax
+            from tiktok_orders_items as a
+            inner join tiktok_orders as b on a.order_id = b.order_id
+            inner join tiktok_shop_details as c on b.seller_code = c.seller_code
+            inner join titok_product_category as d on c.category_id = d.category_id
+            inner join t_amazon_order as e on e.tiktok_order_id = b.id
+            inner join amazon_filter_product as f on a.filter_product_id = f.id
+            inner join titok_product_category as g on f.category_id =g.category_id
+            where d.category_id = %s and b.`status` = 'COMPLETED' and e.money is not null
+            order by profit desc
+        """
+
+        lr_cursor.execute(query, (category_id,))
+        results = lr_cursor.fetchall()
+
+        if not results:
+            return f"No result for order statistic in one root category", 404
+
+        # 返回结果
+        return jsonify({"results": results}), 200
+    except mysql.connector.Error as e:
+        return f"Database error: {str(e)}", 500
+    finally:
+        # 关闭数据库连接
+        if 'lr_cursor' in locals():
+            lr_cursor.close()
+        if 'lr_connection' in locals():
+            lr_connection.close()
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=21312)
