@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链接管理</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            margin: 20px 0;
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .message {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>链接管理系统</h1>
+    <p class="message">流程为 获取链接 -- txt转化update_link_status的格式 -- 使用链接后同步为已使用</p>
+
+    <div class="container">
+        <h3>获取未使用的链接</h3>
+        <select id="category-select">
+            <option value="">请选择类别</option>
+        </select>
+        <button id="get-unused-links">获取未使用的链接</button>
+        <a id="download-link" style="display: none;" href="#" download>
+            <button>下载未使用链接</button>
+        </a>
+    </div>
+
+    <div class="container">
+        <h3>同步LR数据到US数据库</h3>
+        <button id="sync-data">同步数据</button>
+    </div>
+
+    <div class="container">
+        <h3>更新链接为已使用状态</h3>
+        <textarea id="links-to-update" placeholder="输入需要更新的链接，一行一个"></textarea>
+        <button id="update-links-status">更新链接状态</button>
+    </div>
+
+    <div id="status-message" class="message"></div>
+
+    <script>
+        // 获取分类数据并填充下拉框
+        $(document).ready(function() {
+            axios.get('http://localhost:21312/get_category_info')
+                .then(response => {
+                    if (response.data.categories) {
+                        const select = $('#category-select');
+                        response.data.categories.forEach(category => {
+                            select.append(`<option value="${category.category_id}">${category.category_name} - ${category.description}</option>`);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("获取类别信息失败:", error);
+                    alert("获取类别信息失败");
+                });
+
+            // 获取未使用的链接
+            $('#get-unused-links').click(function() {
+                const categoryId = $('#category-select').val();
+                if (!categoryId) {
+                    alert('请选择一个类别');
+                    return;
+                }
+
+                axios.get(`http://localhost:21312/get_unused_links?category_id=${categoryId}`)
+                    .then(response => {
+                        if (response.data) {
+                            $('#download-link').attr('href', URL.createObjectURL(new Blob([response.data], { type: 'text/plain' })));
+                            $('#download-link').show();
+                        }
+                    })
+                    .catch(error => {
+                        alert("获取未使用链接失败");
+                        console.error(error);
+                    });
+            });
+
+            // 同步LR数据到US数据库
+            $('#sync-data').click(function() {
+                axios.get('http://localhost:21312/synch_data')
+                    .then(response => {
+                        $('#status-message').text("同步完成").removeClass("error").addClass("message");
+                    })
+                    .catch(error => {
+                        $('#status-message').text("同步失败").removeClass("message").addClass("error");
+                        console.error("同步失败:", error);
+                    });
+            });
+
+            // 更新链接为已使用状态
+            $('#update-links-status').click(function() {
+                const links = $('#links-to-update').val().split('\n').map(link => link.trim()).filter(link => link);
+                if (!links.length) {
+                    alert('请输入需要更新的链接');
+                    return;
+                }
+
+                axios.post('http://localhost:21312/update_link_status', { links })
+                    .then(response => {
+                        $('#status-message').text(response.data.message).removeClass("error").addClass("message");
+                    })
+                    .catch(error => {
+                        $('#status-message').text("更新失败").removeClass("message").addClass("error");
+                        console.error("更新失败:", error);
+                    });
+            });
+        });
+    </script>
+
+</body>
+</html>
