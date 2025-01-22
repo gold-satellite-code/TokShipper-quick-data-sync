@@ -27,8 +27,8 @@ CREATE TABLE students (
 执行docker指令
 
 ```
-docker build -t TokShipper-quick-data-sync .
+docker build -t tokshipper-quick-data-sync .
 
-docker run -d -p 2467:2467 --name TokShipper-quick-data-sync TokShipper-quick-data-sync
+docker run -d -p 21312:21312 --name tokshipper-quick-data-sync tokshipper-quick-data-sync
 ```
 
