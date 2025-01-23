@@ -257,26 +257,26 @@ def get_order_statistic_root_category():
         lr_connection = get_connection_LR()
         lr_cursor = lr_connection.cursor(dictionary=True)
 
-        # 查询未使用的链接
+        # 查询
         query = """
             SELECT d.category_id, 
                    d.category_name, 
                    d.description,
                    ROUND(SUM(b.payment_total_amount), 2) AS userpay, 
-                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)), 2) AS profit, 
-                   ROUND(SUM(e.money), 2) AS chengben, 
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0))), 2) AS profit, 
+                   ROUND(SUM(IFNULL(e.money, 0)), 2) AS chengben, 
                    COUNT(0) AS orderCount,
                    ROUND(SUM(b.payment_total_amount) / COUNT(0), 2) AS avgUserPrice,
-                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)) / COUNT(0), 2) AS avgProfit,
-                   ROUND(SUM(e.money) / COUNT(0), 2) AS avgChengben,
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0))) / COUNT(0), 2) AS avgProfit,
+                   ROUND(SUM(IFNULL(e.money, 0)) / COUNT(0), 2) AS avgChengben,
                    ROUND(SUM(b.payment_shipping_fee_tax) / COUNT(0), 2) AS avgfeeTax,
                    ROUND(SUM(b.payment_product_tax) / COUNT(0), 2) AS avgproductTax
             FROM tiktok_orders_items AS a
             INNER JOIN tiktok_orders AS b ON a.order_id = b.order_id
             INNER JOIN tiktok_shop_details AS c ON b.seller_code = c.seller_code
             INNER JOIN titok_product_category AS d ON c.category_id = d.category_id
-            INNER JOIN t_amazon_order AS e ON e.tiktok_order_id = b.id
-            WHERE b.`status` = 'COMPLETED'  AND e.money IS NOT NULL
+            LEFT JOIN t_amazon_order AS e ON e.tiktok_order_id = b.id
+            WHERE b.`status` = 'COMPLETED' 
             GROUP BY d.category_id, d.category_name, d.description
             ORDER BY profit DESC
         """
@@ -313,26 +313,26 @@ def get_order_statistic_one_root_category():
         lr_connection = get_connection_LR()
         lr_cursor = lr_connection.cursor(dictionary=True)
 
-        # 查询未使用的链接
+        # 查询
         query = """
             select g.category_id, g.category_name,g.description,
                    ROUND(SUM(b.payment_total_amount), 2) AS userpay, 
-                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)), 2) AS profit, 
-                   ROUND(SUM(e.money), 2) AS chengben, 
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0))), 2) AS profit, 
+                   ROUND(SUM(IFNULL(e.money, 0)), 2) AS chengben, 
                    COUNT(0) AS orderCount,
                    ROUND(SUM(b.payment_total_amount) / COUNT(0), 2) AS avgUserPrice,
-                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money)) / COUNT(0), 2) AS avgProfit,
-                   ROUND(SUM(e.money) / COUNT(0), 2) AS avgChengben,
+                   ROUND(SUM(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0))) / COUNT(0), 2) AS avgProfit,
+                   ROUND(SUM(IFNULL(e.money, 0)) / COUNT(0), 2) AS avgChengben,
                    ROUND(SUM(b.payment_shipping_fee_tax) / COUNT(0), 2) AS avgfeeTax,
                    ROUND(SUM(b.payment_product_tax) / COUNT(0), 2) AS avgproductTax
             from tiktok_orders_items as a
             inner join tiktok_orders as b on a.order_id = b.order_id
             inner join tiktok_shop_details as c on b.seller_code = c.seller_code
             inner join titok_product_category as d on c.category_id = d.category_id
-            inner join t_amazon_order as e on e.tiktok_order_id = b.id
+            left join t_amazon_order as e on e.tiktok_order_id = b.id
             inner join amazon_filter_product as f on a.filter_product_id = f.id
             inner join titok_product_category as g on f.category_id =g.category_id
-            where d.category_id = %s and  b.`status` = 'COMPLETED' and e.money is not null 
+            where d.category_id = %s and  b.`status` = 'COMPLETED' 
             group by g.category_id, g.category_name,g.description
             order by profit desc
         """
@@ -368,22 +368,22 @@ def get_order_detail_one_root_category():
         lr_connection = get_connection_LR()
         lr_cursor = lr_connection.cursor(dictionary=True)
 
-        # 查询未使用的链接
+        # 查询
         query = """
             select b.order_id, g.category_id, g.category_name,g.description,
                 ROUND(b.payment_total_amount, 2) AS userpay, 
-                ROUND(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + e.money), 2) AS profit,
-                ROUND(e.money, 2) AS chengben,
+                ROUND(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0)), 2) AS profit,
+                ROUND(IFNULL(e.money, 0), 2) AS chengben,
                 ROUND(b.payment_shipping_fee_tax, 2) AS feeTax,
                 ROUND(b.payment_product_tax, 2) AS productTax
             from tiktok_orders_items as a
             inner join tiktok_orders as b on a.order_id = b.order_id
             inner join tiktok_shop_details as c on b.seller_code = c.seller_code
             inner join titok_product_category as d on c.category_id = d.category_id
-            inner join t_amazon_order as e on e.tiktok_order_id = b.id
+            left join t_amazon_order as e on e.tiktok_order_id = b.id
             inner join amazon_filter_product as f on a.filter_product_id = f.id
             inner join titok_product_category as g on f.category_id =g.category_id
-            where d.category_id = %s and b.`status` = 'COMPLETED' and e.money is not null
+            where d.category_id = %s and b.`status` = 'COMPLETED' 
             order by profit desc
         """
 
