@@ -276,7 +276,7 @@ def get_order_statistic_root_category():
             INNER JOIN tiktok_shop_details AS c ON b.seller_code = c.seller_code
             INNER JOIN titok_product_category AS d ON c.category_id = d.category_id
             LEFT JOIN t_amazon_order AS e ON e.tiktok_order_id = b.id
-            WHERE b.`status` = 'COMPLETED' 
+            WHERE b.`status` = 'COMPLETED' and e.money is not null 
             GROUP BY d.category_id, d.category_name, d.description
             ORDER BY profit DESC
         """
@@ -332,7 +332,7 @@ def get_order_statistic_one_root_category():
             left join t_amazon_order as e on e.tiktok_order_id = b.id
             inner join amazon_filter_product as f on a.filter_product_id = f.id
             inner join titok_product_category as g on f.category_id =g.category_id
-            where d.category_id = %s and  b.`status` = 'COMPLETED' 
+            where d.category_id = %s and  b.`status` = 'COMPLETED' and e.money is not null
             group by g.category_id, g.category_name,g.description
             order by profit desc
         """
@@ -370,7 +370,7 @@ def get_order_detail_one_root_category():
 
         # 查询
         query = """
-            select b.order_id, g.category_id, g.category_name,g.description,
+            select b.order_id, g.category_id, g.category_name,g.description,f.raw_url,
                 ROUND(b.payment_total_amount, 2) AS userpay, 
                 ROUND(b.payment_total_amount + b.payment_platform_discount - (b.payment_shipping_fee_tax + b.payment_product_tax + IFNULL(e.money, 0)), 2) AS profit,
                 ROUND(IFNULL(e.money, 0), 2) AS chengben,
@@ -383,7 +383,7 @@ def get_order_detail_one_root_category():
             left join t_amazon_order as e on e.tiktok_order_id = b.id
             inner join amazon_filter_product as f on a.filter_product_id = f.id
             inner join titok_product_category as g on f.category_id =g.category_id
-            where d.category_id = %s and b.`status` = 'COMPLETED' 
+            where d.category_id = %s and b.`status` = 'COMPLETED' and e.money is not null
             order by profit desc
         """
 
